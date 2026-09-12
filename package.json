@@ -1,0 +1,24 @@
+{
+  "dependencies": {
+    "discord.js": "^14.27.0",
+    "dotenv": "^17.4.2",
+    "node.js": "^0.0.1-security"
+  },
+  "name": "bahade-s-albion-party-bot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bahade2323/Bahade-s-Albion-Party-Bot.git"
+  },
+  "keywords": [],
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/bahade2323/Bahade-s-Albion-Party-Bot/issues"
+  },
+  "homepage": "https://github.com/bahade2323/Bahade-s-Albion-Party-Bot#readme"
+}
