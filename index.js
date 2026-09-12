@@ -1,8 +1,22 @@
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
+const express = require('express');
 const { Client, Collection, GatewayIntentBits, REST, Routes, EmbedBuilder } = require('discord.js');
 
+// 1. Initialize Express Server for Render Web Service (Keeps bot alive via HTTP)
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.get('/', (req, res) => {
+  res.send('Discord bot is active and running on Render!');
+});
+
+app.listen(PORT, () => {
+  console.log(`Web server listening on port ${PORT}`);
+});
+
+// 2. Initialize Discord Client
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -13,7 +27,7 @@ const client = new Client({
 
 client.commands = new Collection();
 
-// Load command files
+// Load command files from commands/ directory
 const commandsPath = path.join(__dirname, 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 const commandsData = [];
@@ -29,6 +43,7 @@ for (const file of commandFiles) {
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
+// Dynamic Guild Registration Helper
 async function registerGuildCommands(guildId, guildName) {
   try {
     await rest.put(
@@ -41,6 +56,7 @@ async function registerGuildCommands(guildId, guildName) {
   }
 }
 
+// Relative UTC Time Parser
 function parseUtcToDiscordTimestamp(timeString) {
   const match = timeString.trim().match(/^(\d{1,2})\s*UTC(?:\s+(\d+)\s*days?)?$/i);
   if (!match) return null;
@@ -66,6 +82,7 @@ function parseUtcToDiscordTimestamp(timeString) {
   return `<t:${unixSeconds}:R>`;
 }
 
+// Client Events
 client.once('ready', async () => {
   console.log(`Logged in as ${client.user.tag}`);
   for (const [guildId, guild] of client.guilds.cache) {
@@ -77,15 +94,15 @@ client.on('guildCreate', async (guild) => {
   await registerGuildCommands(guild.id, guild.name);
 });
 
-// Interaction Handler
+// Interaction Router
 client.on('interactionCreate', async (interaction) => {
-  // 1. Slash Command Router
+  // 1. Slash Commands
   if (interaction.isChatInputCommand()) {
-    // Prevent running /createparty inside a thread
+    // Prevent running /createparty inside threads
     if (interaction.commandName === 'createparty' && interaction.channel.isThread()) {
       return interaction.reply({
         content: '⚠️ **You cannot create a party inside an existing thread!** Please run `/createparty` in an open text channel or VC text chat.',
-        flags: 64 // Ephemeral message (only visible to user)
+        flags: 64 // Ephemeral response
       });
     }
 
@@ -100,9 +117,8 @@ client.on('interactionCreate', async (interaction) => {
     return;
   }
 
-  // 2. Handle Modal Submissions
+  // 2. Modal Submissions
   if (interaction.isModalSubmit() && interaction.customId === 'party_modal') {
-    // Secondary check if submitted inside a thread
     if (interaction.channel.isThread()) {
       return interaction.reply({
         content: '⚠️ **Cannot create a party thread inside another thread.** Please execute `/createparty` in a standard channel.',
@@ -126,14 +142,14 @@ client.on('interactionCreate', async (interaction) => {
 
     const messageContent = `Organizer ${interaction.user}\n\n${title}\n\n${rolesList}\n\n**Massing:** ${relativeTimer}`;
 
-    // Post party message using withResponse: true (fixes deprecation warning)
+    // Fix deprecated fetchReply syntax with withResponse
     const replyResponse = await interaction.reply({
       content: messageContent,
       withResponse: true,
     });
     const partyMessage = replyResponse.resource.message;
 
-    // Create associated thread with crash prevention
+    // Create Thread & Post Instruction Embed
     try {
       const threadName = customThreadName && customThreadName.trim() !== '' ? customThreadName : title;
       const thread = await partyMessage.startThread({
@@ -141,7 +157,6 @@ client.on('interactionCreate', async (interaction) => {
         autoArchiveDuration: 1440,
       });
 
-      // Instruction Embed
       const instructionEmbed = new EmbedBuilder()
         .setColor('#2b2d31')
         .setTitle('Register for role')
@@ -167,7 +182,7 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
-// Listener for Commands in Threads, Channels, and VC Text Chats
+// Listener for Role Commands across Channels, Threads, and VC Chats
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
