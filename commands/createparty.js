@@ -15,7 +15,7 @@ module.exports = {
       .setCustomId('party_title')
       .setLabel('Party Header')
       .setPlaceholder('Type here header')
-      .setStyle(TextInputStyle.Short)
+      .setStyle(TextInputStyle.Paragraph)
       .setRequired(true);
 
     // Party Roles
